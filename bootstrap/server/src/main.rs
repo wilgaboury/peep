@@ -53,7 +53,7 @@ async fn main() -> anyhow::Result<()> {
 
     // pass incoming GET requests on "/hello-world" to "hello_world" handler.
     let app = Router::new()
-        .route("/version", get(version))
+        .route("/ok", get(ok))
         .route("/session", post(create_session))
         .route("/session/{id}", get(get_session))
         .route("/session/{id}", patch(update_session))
@@ -70,10 +70,8 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-const version_num: u64 = 0;
-
-async fn version() -> impl IntoResponse {
-    Json(version_num)
+async fn ok() -> impl IntoResponse {
+    StatusCode::OK
 }
 
 async fn create_session(
