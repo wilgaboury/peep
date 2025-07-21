@@ -1,7 +1,7 @@
 use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get, patch, post}, Json, Router};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use std::{collections::HashMap, net::{Ipv6Addr, SocketAddr}, sync::{Arc, RwLock}};
+use std::{collections::{HashMap, HashSet}, net::{Ipv6Addr, SocketAddr}, sync::{Arc, RwLock}};
 use tokio::net::TcpListener;
 
 #[derive(Debug, Clone)]
@@ -17,10 +17,10 @@ impl Sessions {
 
 #[derive(Debug, Clone)]
 struct Session {
-    members: Vec<SessionMember>
+    members: HashSet<SessionMember>
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct SessionMember {
     addr: Ipv6Addr,
     port: u16
@@ -80,11 +80,11 @@ async fn create_session(State(state): State<AppState>, Json(input): Json<Session
     let member = input.maybe_to_struct().ok_or(StatusCode::BAD_REQUEST)?;
     let id = Uuid::new_v4().to_string();
 
+    let mut members = HashSet::new();
+    members.insert(member);
     {
         let mut map = state.sessions.map.write().unwrap();
-        map.insert(id.clone(), Arc::new(RwLock::new(Session {
-            members: vec![member]
-        })));
+        map.insert(id.clone(), Arc::new(RwLock::new(Session { members })));
     }
 
     Ok(Json(CreateSessionResponse {
@@ -93,19 +93,13 @@ async fn create_session(State(state): State<AppState>, Json(input): Json<Session
 }
 
 async fn get_session(State(state): State<AppState>, Path(id): Path<String>) -> Result<impl IntoResponse, StatusCode> {
-    let session = {
-        let map = state.sessions.map.read().unwrap();
-        let val = map.get(&id);
-        if let Some(session) = val {
-            session.clone()
-        } else {
-            return Err(StatusCode::NOT_FOUND)
-        }
-    };
-
+    let session = state.sessions.map.read().unwrap().get(&id).ok_or(StatusCode::NOT_FOUND)?.clone();
     Ok(Json(session.read().unwrap().members.iter().map(|member| member.to_json()).collect::<Vec<_>>()))
 }
 
-async fn update_session() {
-    
+async fn update_session(State(state): State<AppState>, Path(id): Path<String>, Json(input): Json<SessionMemberJson>) -> Result<impl IntoResponse, StatusCode> {
+    let member = input.maybe_to_struct().ok_or(StatusCode::BAD_REQUEST)?;
+    let session = state.sessions.map.read().unwrap().get(&id).ok_or(StatusCode::NOT_FOUND)?.clone();
+    session.write().unwrap().members.insert(member);
+    Ok(StatusCode::OK)
 }
