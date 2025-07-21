@@ -17,19 +17,27 @@ impl Sessions {
 
 #[derive(Debug)]
 struct Session {
-    members: HashMap<SessionMember, u64>,
+    members: HashMap<SessionMemberLocation, u64>,
     next_id: AtomicU64
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct SessionMember {
+struct SessionMemberLocation {
     addr: Ipv6Addr,
     port: u16
 }
 
-impl SessionMember {
-    fn to_json(&self) -> SessionMemberJson {
-        SessionMemberJson { addr: self.addr.to_string(), port: self.port }
+impl SessionMemberLocation {
+    fn to_json(&self) -> common::SessionMemberLocation {
+        common::SessionMemberLocation { addr: self.addr.to_string(), port: self.port }
+    }
+
+    fn maybe_from_json(json: &common::SessionMemberLocation) -> Option<Self> {
+        let addr = json.addr.parse::<Ipv6Addr>().ok()?;
+        Some(SessionMemberLocation {
+            addr,
+            port: json.port
+        })
     }
 }
 
@@ -45,6 +53,7 @@ async fn main() -> anyhow::Result<()> {
 
     // pass incoming GET requests on "/hello-world" to "hello_world" handler.
     let app = Router::new()
+        .route("/version", get(version))
         .route("/session", post(create_session))
         .route("/session/{id}", get(get_session))
         .route("/session/{id}", patch(update_session))
@@ -61,29 +70,17 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-impl SessionMemberJson {
-    fn maybe_to_struct(&self) -> Option<SessionMember> {
-        let addr = self.addr.parse::<Ipv6Addr>().ok()?;
-        Some(SessionMember {
-            addr,
-            port: self.port
-        })
-    }
+const version_num: u64 = 0;
+
+async fn version() -> impl IntoResponse {
+    Json(version_num)
 }
 
-#[derive(Debug, Serialize, Clone)]
-struct CreateSessionResponse {
-    session_id: String,
-    member_id: u64
-}
-
-#[derive(Debug, Serialize, Clone)]
-struct UpdateSessionResponse {
-    member_id: u64
-}
-
-async fn create_session(State(state): State<AppState>, Json(input): Json<SessionMemberJson>) -> Result<impl IntoResponse, StatusCode> {
-    let member = input.maybe_to_struct().ok_or(StatusCode::BAD_REQUEST)?;
+async fn create_session(
+        State(state): State<AppState>, 
+        Json(input): Json<common::SessionMemberLocation>
+    ) -> Result<impl IntoResponse, StatusCode> {
+    let member = SessionMemberLocation::maybe_from_json(&input).ok_or(StatusCode::BAD_REQUEST)?;
     let session_id = Uuid::new_v4().to_string();
 
     let mut members = HashMap::new();
@@ -96,7 +93,7 @@ async fn create_session(State(state): State<AppState>, Json(input): Json<Session
          })));
     }
 
-    Ok(Json(CreateSessionResponse {
+    Ok(Json(common::CreateSessionResponse {
         session_id,
         member_id: 0
     }))
@@ -107,8 +104,12 @@ async fn get_session(State(state): State<AppState>, Path(id): Path<String>) -> R
     Ok(Json(session.read().unwrap().members.keys().map(|member| member.to_json()).collect::<Vec<_>>()))
 }
 
-async fn update_session(State(state): State<AppState>, Path(id): Path<String>, Json(input): Json<SessionMemberJson>) -> Result<impl IntoResponse, StatusCode> {
-    let input_member = input.maybe_to_struct().ok_or(StatusCode::BAD_REQUEST)?;
+async fn update_session(
+        State(state): State<AppState>, 
+        Path(id): Path<String>, 
+        Json(input): Json<common::SessionMemberLocation>
+    ) -> Result<impl IntoResponse, StatusCode> {
+    let input_member = SessionMemberLocation::maybe_from_json(&input).ok_or(StatusCode::BAD_REQUEST)?;
     let session = state.sessions.map.read().unwrap().get(&id).ok_or(StatusCode::NOT_FOUND)?.clone();
     let mut session = session.write().unwrap();
     let maybe_member_id = session.members.get(&input_member).map(|v| *v);
@@ -118,7 +119,7 @@ async fn update_session(State(state): State<AppState>, Path(id): Path<String>, J
             session.members.insert(input_member, member_id);
             member_id
         });
-    Ok(Json(UpdateSessionResponse {
+    Ok(Json(common::UpdateSessionResponse {
         member_id
     }))
 }
