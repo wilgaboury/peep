@@ -1,8 +1,8 @@
 use std::{net::SocketAddr};
 
-use client::BootstrapClient;
+use client::{BootstrapClient, Security};
 use peep_server::create_server_router;
-use tokio::{net::TcpListener, sync::oneshot};
+use tokio::{net::TcpListener, spawn, sync::oneshot};
 
 pub struct TestBootstrapServer {
     shutdown: Option<oneshot::Sender<()>>,
@@ -18,16 +18,16 @@ impl TestBootstrapServer {
 
         let (tx, rx) = oneshot::channel::<()>();
 
-        tokio::spawn(async move {
-            axum::serve(listener, app.into_make_service())
-                .with_graceful_shutdown(async {
-                    rx.await.unwrap()
-                })
-                .await
-                .unwrap();
+        let server = axum::serve(listener, app.into_make_service())
+            .with_graceful_shutdown(async {
+                rx.await.unwrap()
+            });
+
+        spawn(async move {
+            server.await.unwrap();
         });
 
-        Ok(Self { shutdown: Some(tx), client: BootstrapClient::create(location).await? })
+        Ok(Self { shutdown: Some(tx), client: BootstrapClient::new(location, Security::Insecure).await? })
     }
 
     pub fn client(&self) -> &BootstrapClient {
