@@ -1,6 +1,7 @@
 use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get, patch, post}, Json, Router};
+use common::{SessionMemberLocation, SessionMemberLocationSerde};
 use uuid::Uuid;
-use std::{collections::HashMap, env, net::{Ipv6Addr, SocketAddr}, sync::{atomic::{AtomicU64, Ordering}, Arc, RwLock}};
+use std::{collections::HashMap, env, net::{SocketAddr}, sync::{atomic::{AtomicU64, Ordering}, Arc, RwLock}};
 use tokio::net::TcpListener;
 
 #[derive(Debug, Clone)]
@@ -18,26 +19,6 @@ impl Sessions {
 struct Session {
     members: HashMap<SessionMemberLocation, u64>,
     next_id: AtomicU64
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct SessionMemberLocation {
-    addr: Ipv6Addr,
-    port: u16
-}
-
-impl SessionMemberLocation {
-    fn to_json(&self) -> common::SessionMemberLocation {
-        common::SessionMemberLocation { addr: self.addr.to_string(), port: self.port }
-    }
-
-    fn maybe_from_json(json: &common::SessionMemberLocation) -> Option<Self> {
-        let addr = json.addr.parse::<Ipv6Addr>().ok()?;
-        Some(SessionMemberLocation {
-            addr,
-            port: json.port
-        })
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -75,9 +56,9 @@ async fn ok() -> impl IntoResponse {
 
 async fn create_session(
         State(state): State<AppState>, 
-        Json(input): Json<common::SessionMemberLocation>
+        Json(input): Json<SessionMemberLocationSerde>
     ) -> Result<impl IntoResponse, StatusCode> {
-    let member = SessionMemberLocation::maybe_from_json(&input).ok_or(StatusCode::BAD_REQUEST)?;
+    let member = SessionMemberLocation::try_from(&input).map_err(|_| StatusCode::BAD_REQUEST)?;
     let session_id = Uuid::new_v4().to_string();
 
     let mut members = HashMap::new();
@@ -98,15 +79,17 @@ async fn create_session(
 
 async fn get_session(State(state): State<AppState>, Path(id): Path<String>) -> Result<impl IntoResponse, StatusCode> {
     let session = state.sessions.map.read().unwrap().get(&id).ok_or(StatusCode::NOT_FOUND)?.clone();
-    Ok(Json(session.read().unwrap().members.keys().map(|member| member.to_json()).collect::<Vec<_>>()))
+    Ok(Json(session.read().unwrap().members.keys()
+        .map(|member| SessionMemberLocationSerde::from(member))
+        .collect::<Vec<_>>()))
 }
 
 async fn update_session(
         State(state): State<AppState>, 
         Path(id): Path<String>, 
-        Json(input): Json<common::SessionMemberLocation>
+        Json(input): Json<SessionMemberLocationSerde>
     ) -> Result<impl IntoResponse, StatusCode> {
-    let input_member = SessionMemberLocation::maybe_from_json(&input).ok_or(StatusCode::BAD_REQUEST)?;
+    let input_member = SessionMemberLocation::try_from(&input).map_err(|_| StatusCode::BAD_REQUEST)?;
     let session = state.sessions.map.read().unwrap().get(&id).ok_or(StatusCode::NOT_FOUND)?.clone();
     let mut session = session.write().unwrap();
     let maybe_member_id = session.members.get(&input_member).map(|v| *v);

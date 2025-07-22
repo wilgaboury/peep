@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use common::{SessionMemberLocationSerde, SessionMemberLocationsSerde, UpdateSessionResponse};
 use reqwest::StatusCode;
 
 pub struct BootstrapClient {
@@ -25,15 +26,15 @@ impl BootstrapClient {
         format!("https://{}/{}", self.location, path)
     }
 
-    pub async fn create_session(&self, request: &common::SessionMemberLocation) -> anyhow::Result<common::CreateSessionResponse> {
+    pub async fn create_session(&self, request: &SessionMemberLocationSerde) -> anyhow::Result<common::CreateSessionResponse> {
         Ok(self.client.post(self.url("session")).json(&request).send().await?.json::<common::CreateSessionResponse>().await?)
     }
 
-    pub async fn get_session(&self, session_id: &str) -> anyhow::Result<common::SessionMemberLocations> {
-        Ok(self.client.get(self.url(format!("session/{}", session_id).as_str())).send().await?.json::<common::SessionMemberLocations>().await?)
+    pub async fn get_session(&self, session_id: &str) -> anyhow::Result<SessionMemberLocationsSerde> {
+        Ok(self.client.get(self.url(format!("session/{}", session_id).as_str())).send().await?.json().await?)
     }
 
-    pub async fn update_session(&self, session_id: &str, request: &common::SessionMemberLocation) -> anyhow::Result<common::UpdateSessionResponse> {
-        Ok(self.client.patch(self.url(format!("session/{}", session_id).as_str())).json(&request).send().await?.json::<common::UpdateSessionResponse>().await?)
+    pub async fn update_session(&self, session_id: &str, request: &SessionMemberLocationSerde) -> anyhow::Result<UpdateSessionResponse> {
+        Ok(self.client.patch(self.url(format!("session/{}", session_id).as_str())).json(&request).send().await?.json().await?)
     }
 }
