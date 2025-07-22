@@ -2,6 +2,7 @@ use anyhow::anyhow;
 use common::{SessionMemberLocationSerde, SessionMemberLocationsSerde, UpdateSessionResponse};
 use reqwest::StatusCode;
 
+#[derive(Clone)]
 pub struct BootstrapClient {
     client: reqwest::Client,
     location: String
