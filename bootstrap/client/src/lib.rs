@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use common::{SessionMemberLocation, SessionMemberLocationSerde, SessionMemberLocationsSerde, UpdateSessionResponse};
+use common::{SessionMemberLocation, SessionMemberLocationSerde, SessionMemberLocationsSerde};
 use reqwest::StatusCode;
 
 #[derive(Clone)]
@@ -53,7 +53,11 @@ impl BootstrapClient {
             .collect::<anyhow::Result<_>>()?)
     }
 
-    pub async fn update_session(&self, session_id: &str, request: &SessionMemberLocation) -> anyhow::Result<UpdateSessionResponse> {
-        Ok(self.client.patch(self.url(format!("session/{}", session_id).as_str())).json(&SessionMemberLocationSerde::from(request)).send().await?.json().await?)
+    pub async fn update_session(&self, session_id: &str, request: &SessionMemberLocation) -> anyhow::Result<()> {
+        let status = self.client.patch(self.url(format!("session/{}", session_id).as_str())).json(&SessionMemberLocationSerde::from(request)).send().await?.status();
+        match status {
+            StatusCode::OK => Ok(()),
+            _ => Err(anyhow!(format!("failed to update: {}", status)))
+        }
     }
 }

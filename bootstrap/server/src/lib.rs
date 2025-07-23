@@ -1,7 +1,7 @@
 use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get, patch, post}, Json, Router};
 use common::{SessionMemberLocation, SessionMemberLocationSerde};
 use uuid::Uuid;
-use std::{collections::HashMap, sync::{atomic::{AtomicU64, Ordering}, Arc, RwLock}};
+use std::{collections::{HashMap, HashSet}, sync::{Arc, RwLock}};
 
 #[derive(Debug, Clone)]
 struct Sessions {
@@ -16,8 +16,7 @@ impl Sessions {
 
 #[derive(Debug)]
 struct Session {
-    members: HashMap<SessionMemberLocation, u64>,
-    next_id: AtomicU64
+    members: HashSet<SessionMemberLocation>,
 }
 
 #[derive(Debug, Clone)]
@@ -45,25 +44,21 @@ async fn create_session(
     let member = SessionMemberLocation::try_from(&input).map_err(|_| StatusCode::BAD_REQUEST)?;
     let session_id = Uuid::new_v4().to_string();
 
-    let mut members = HashMap::new();
-    members.insert(member, 1);
+    let mut members = HashSet::new();
+    members.insert(member);
     {
         let mut map = state.sessions.map.write().unwrap();
-        map.insert(session_id.clone(), Arc::new(RwLock::new(Session { 
-            members,
-            next_id: AtomicU64::new(1)
-         })));
+        map.insert(session_id.clone(), Arc::new(RwLock::new(Session { members })));
     }
 
     Ok(Json(common::CreateSessionResponse {
         session_id,
-        member_id: 0
     }))
 }
 
 async fn get_session(State(state): State<AppState>, Path(id): Path<String>) -> Result<impl IntoResponse, StatusCode> {
     let session = state.sessions.map.read().unwrap().get(&id).ok_or(StatusCode::NOT_FOUND)?.clone();
-    Ok(Json(session.read().unwrap().members.keys()
+    Ok(Json(session.read().unwrap().members.iter()
         .map(|member| SessionMemberLocationSerde::from(member))
         .collect::<Vec<_>>()))
 }
@@ -76,14 +71,6 @@ async fn update_session(
     let input_member = SessionMemberLocation::try_from(&input).map_err(|_| StatusCode::BAD_REQUEST)?;
     let session = state.sessions.map.read().unwrap().get(&id).ok_or(StatusCode::NOT_FOUND)?.clone();
     let mut session = session.write().unwrap();
-    let maybe_member_id = session.members.get(&input_member).map(|v| *v);
-    let member_id = maybe_member_id
-        .unwrap_or_else(|| {
-            let member_id = session.next_id.fetch_add(1, Ordering::Relaxed);
-            session.members.insert(input_member, member_id);
-            member_id
-        });
-    Ok(Json(common::UpdateSessionResponse {
-        member_id
-    }))
+    session.members.insert(input_member);
+    Ok(StatusCode::OK)
 }
