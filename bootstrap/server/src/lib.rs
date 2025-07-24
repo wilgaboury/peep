@@ -1,6 +1,6 @@
 use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get, patch, post}, Json, Router};
 use bootstrap_common::{SessionMemberLocation, SessionMemberLocationSerde};
-use tokio::net::TcpStream;
+use tokio::{net::TcpStream, select, time};
 use uuid::Uuid;
 use std::{collections::{HashMap, HashSet}, sync::{Arc, RwLock}};
 
@@ -64,7 +64,10 @@ async fn update_session(
     ) -> Result<impl IntoResponse, StatusCode> {
     let input_member = SessionMemberLocation::try_from(&input).map_err(|_| StatusCode::BAD_REQUEST)?;
 
-    let _ = TcpStream::connect(input_member.to_string()).await.map_err(|_| StatusCode::CONFLICT)?;
+    select! {
+        stream = TcpStream::connect(input_member.to_string()) => { stream.map_err(|_| StatusCode::CONFLICT)? },
+        () = time::sleep(time::Duration::from_secs(5)) => { Err(StatusCode::CONFLICT)? }
+    };
 
     let session = state.sessions.map.read().unwrap().get(&id).ok_or(StatusCode::NOT_FOUND)?.clone();
     let mut session = session.write().unwrap();
