@@ -32,14 +32,13 @@ impl PeepClient {
         let session_id = if let Some(ref id) = config.session_id {
             id.clone()
         } else {
-            bootstrap_client.create_session().await?.session_id
+            bootstrap_client.create_session().await?
         };
 
         for (_, ip) in list_afinet_netifas()?.iter() {
             if let IpAddr::V6(ipv6) = ip {
                 let listener = TcpListener::bind(format!("[{}]:0", ipv6.to_string())).await?;
                 bootstrap_client.update_session(&session_id, &(SessionMemberLocation::try_from(&listener.local_addr()?)?)).await?;
-
 
             }
         }

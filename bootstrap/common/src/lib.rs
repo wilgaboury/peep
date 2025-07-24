@@ -49,6 +49,12 @@ impl TryFrom<&SocketAddr> for SessionMemberLocation {
     }
 }
 
+impl ToString for SessionMemberLocation {
+    fn to_string(&self) -> String {
+        format!("[{}]:{}", self.addr, self.port)
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CreateSessionResponse {
     pub session_id: String,
