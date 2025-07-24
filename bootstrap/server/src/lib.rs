@@ -1,5 +1,5 @@
 use axum::{extract::{Path, State}, http::StatusCode, response::IntoResponse, routing::{get, patch, post}, Json, Router};
-use common::{SessionMemberLocation, SessionMemberLocationSerde};
+use bootstrap_common::{CreateSessionResponse, SessionMemberLocation, SessionMemberLocationSerde};
 use uuid::Uuid;
 use std::{collections::{HashMap, HashSet}, sync::{Arc, RwLock}};
 
@@ -37,23 +37,16 @@ async fn ok() -> impl IntoResponse {
     StatusCode::OK
 }
 
-async fn create_session(
-        State(state): State<AppState>, 
-        Json(input): Json<SessionMemberLocationSerde>
-    ) -> Result<impl IntoResponse, StatusCode> {
-    let member = SessionMemberLocation::try_from(&input).map_err(|_| StatusCode::BAD_REQUEST)?;
+async fn create_session(State(state): State<AppState>) -> Result<impl IntoResponse, StatusCode> {
     let session_id = Uuid::new_v4().to_string();
 
-    let mut members = HashSet::new();
-    members.insert(member);
+    let members = HashSet::new();
     {
         let mut map = state.sessions.map.write().unwrap();
         map.insert(session_id.clone(), Arc::new(RwLock::new(Session { members })));
     }
 
-    Ok(Json(common::CreateSessionResponse {
-        session_id,
-    }))
+    Ok(session_id)
 }
 
 async fn get_session(State(state): State<AppState>, Path(id): Path<String>) -> Result<impl IntoResponse, StatusCode> {

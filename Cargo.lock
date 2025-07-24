@@ -117,6 +117,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1b8e56985ec62d17e9c1001dc89c88ecd7dc08e47eba5ec7c29c7b5eeecde967"
 
 [[package]]
+name = "bootstrap_client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bootstrap_common",
+ "reqwest",
+]
+
+[[package]]
+name = "bootstrap_common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "serde",
+]
+
+[[package]]
+name = "bootstrap_server"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "bootstrap_client",
+ "bootstrap_common",
+ "serde",
+ "serde_json",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -152,22 +183,8 @@ checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 [[package]]
 name = "chat"
 version = "0.1.0"
-
-[[package]]
-name = "client"
-version = "0.1.0"
 dependencies = [
- "anyhow",
- "common",
- "reqwest",
-]
-
-[[package]]
-name = "common"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "serde",
+ "peep",
 ]
 
 [[package]]
@@ -858,23 +875,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "peep-server"
+name = "peep"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
- "client",
- "common",
+ "bootstrap_client",
+ "bootstrap_common",
+ "local-ip-address",
  "serde",
  "serde_json",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "peeps"
-version = "0.1.0"
-dependencies = [
  "tokio",
 ]
 

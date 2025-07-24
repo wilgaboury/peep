@@ -1,15 +1,11 @@
 # peeps
 
-This is a dead simple library/infra for creating small short-term fully connected p2p networks.
+Dead simple library/infra for creating small short-term fully connected p2p networks.
 
 ## IPV6
 
-One of the most severe limitations it that this lib does not support ipv4 traffic. The main reason being that I don't want to be bothered with all the complexities of NAT traversal
+One of the most severe limitations is that this lib is ipv6 only. The main reason being that I don't want to be bothered with all the complexities of NAT traversal.
 
-## How the Protocol Works
+## How it works
 
-### Bootstrap Step
-
-There is one central bootstrapping server which is used for peer discovery.
-
-1. One client creates a session, and recieves a session id
+There is a central bootstrapping server which is used for peer discovery. Clients create/update a p2p session and the server stores the list of peers, identified by their (ip, port) tuple. Clients joining the session read the list and then connect directly to the peers.

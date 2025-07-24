@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use common::{SessionMemberLocation, SessionMemberLocationSerde, SessionMemberLocationsSerde};
+use bootstrap_common::{CreateSessionResponse, SessionMemberLocation, SessionMemberLocationSerde, SessionMemberLocationsSerde};
 use reqwest::StatusCode;
 
 #[derive(Clone)]
@@ -42,8 +42,8 @@ impl BootstrapClient {
         format!("{}/{}", self.prefix, path)
     }
 
-    pub async fn create_session(&self, request: &SessionMemberLocation) -> anyhow::Result<common::CreateSessionResponse> {
-        Ok(self.client.post(self.url("session")).json(&SessionMemberLocationSerde::from(request)).send().await?.json::<common::CreateSessionResponse>().await?)
+    pub async fn create_session(&self) -> anyhow::Result<String> {
+        Ok(self.client.post(self.url("session")).send().await?.text().await?)
     }
 
     pub async fn get_session(&self, session_id: &str) -> anyhow::Result<Vec<SessionMemberLocation>> {

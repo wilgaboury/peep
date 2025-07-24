@@ -1,9 +1,9 @@
 [package]
-name = "client"
+name = "bootstrap_client"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-common = { path = "../common" }
+bootstrap_common = { path = "../common" }
 reqwest = { version = "0.12", features = ["json"] }
 anyhow = "1"

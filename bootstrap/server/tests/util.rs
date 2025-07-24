@@ -1,7 +1,7 @@
 use std::{net::SocketAddr};
 
-use client::{BootstrapClient, Security};
-use peep_server::create_server_router;
+use bootstrap_client::{BootstrapClient, Security};
+use bootstrap_server::create_server_router;
 use tokio::{net::TcpListener, spawn, sync::oneshot};
 
 pub struct TestBootstrapServer {

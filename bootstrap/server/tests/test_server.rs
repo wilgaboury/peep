@@ -1,6 +1,6 @@
 mod util;
 
-use common::{SessionMemberLocation};
+use bootstrap_common::{SessionMemberLocation};
 use tokio::test;
 
 use crate::util::TestBootstrapServer;
@@ -14,7 +14,11 @@ async fn test_all() -> anyhow::Result<()> {
         port: 0
     };
 
-    let session_id = server.client().create_session(&mem1).await?.session_id;
+    let session_id = server.client().create_session().await?;
+
+    assert_eq!(0, server.client().get_session(&session_id).await?.len());
+
+    server.client().update_session(&session_id, &mem1).await?;
 
     assert!(server.client().get_session(&session_id).await?.contains(&mem1));
 
