@@ -8,7 +8,6 @@ async fn main() -> anyhow::Result<()> {
     let args: Vec<String> = env::args().collect();
     let port = args.get(1).and_then(|port_str| port_str.parse::<u16>().ok()).unwrap_or(80);
 
-    // write address like this to not make typos
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = TcpListener::bind(addr).await?;
 
