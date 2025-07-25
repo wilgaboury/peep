@@ -1,24 +1,14 @@
-use std::{net::IpAddr, sync::Arc};
+use std::{net::IpAddr};
 
 use anyhow::anyhow;
-use axum::{http::StatusCode, response::IntoResponse};
 use bootstrap_client::{BootstrapClient, Security};
 use bootstrap_common::SessionMemberLocation;
 use local_ip_address::list_afinet_netifas;
 use tokio::net::TcpListener;
 
-struct PeepClientState {
-    
-}
-
-impl PeepClientState {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
+#[derive(Clone)]
 pub struct PeepClientConfig {
-    pub bootstrap_server_location: String,
+    pub bootstrap: BootstrapClient,
     pub session: Option<String>
 }
 
@@ -35,16 +25,16 @@ impl PeepClientConfig {
 #[derive(Clone)]
 pub struct PeepClient {
     session: String,
-    member: SessionMemberLocation
+    member: SessionMemberLocation,
+    bootstrap: BootstrapClient
 }
 
 impl PeepClient {
-    pub async fn new(config: &PeepClientConfig) -> anyhow::Result<Self> {
-        let bootstrap_client  = BootstrapClient::new(config.bootstrap_server_location.clone(), Security::Secure).await?;
-        let session = config.session(&bootstrap_client).await?;
-        let member = find_inbound_addr(&session, &bootstrap_client).await?;
+    pub async fn new(config: PeepClientConfig) -> anyhow::Result<Self> {
+        let session = config.session(&config.bootstrap).await?;
+        let member = find_inbound_addr(&session, &config.bootstrap).await?;
 
-        Ok(PeepClient { session, member })
+        Ok(PeepClient { session, member, bootstrap: config.bootstrap })
     }
 }
 
@@ -63,8 +53,4 @@ async fn find_inbound_addr(session: &str, bootstrap_client: &BootstrapClient) ->
     }
 
     Err(anyhow!("could not establish path for inbound traffic"))
-}
-
-async fn ok() -> impl IntoResponse {
-    StatusCode::OK
 }

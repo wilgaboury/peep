@@ -184,6 +184,7 @@ checksum = "9555578bc9e57714c812a1f84e4fc5b4d21fcb063490c624de019f7464c91268"
 name = "chat"
 version = "0.1.0"
 dependencies = [
+ "bootstrap_client",
  "peep",
 ]
 
@@ -879,12 +880,10 @@ name = "peep"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "axum",
  "bootstrap_client",
  "bootstrap_common",
  "local-ip-address",
  "serde",
- "serde_json",
  "tokio",
 ]
 

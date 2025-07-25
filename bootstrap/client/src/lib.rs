@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use bootstrap_common::{CreateSessionResponse, SessionMemberLocation, SessionMemberLocationSerde, SessionMemberLocationsSerde};
+use bootstrap_common::{SessionMemberLocation, SessionMemberLocationSerde, SessionMemberLocationsSerde};
 use reqwest::StatusCode;
 
 #[derive(Clone)]
