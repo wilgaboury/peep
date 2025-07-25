@@ -1,5 +1,15 @@
-use bootstrap_client::BootstrapClient;
+use bootstrap_client::{BootstrapClient, Security};
+use peep::{PeepClient, PeepClientConfig};
 
-fn main() {
-    let bootstrap = BootstrapClient::new(location, security);
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let bootstrap = BootstrapClient::new("52.72.95.29:80".to_string(), Security::Insecure).await?;
+    let peep = PeepClient::new(PeepClientConfig {
+        bootstrap,
+        session: None,
+    }).await?;
+
+    println!("success: {}", peep.session);
+
+    Ok(())
 }

@@ -64,6 +64,8 @@ async fn update_session(
     ) -> Result<impl IntoResponse, StatusCode> {
     let input_member = SessionMemberLocation::try_from(&input).map_err(|_| StatusCode::BAD_REQUEST)?;
 
+    println!("trying connection to {}", input_member.to_string());
+
     select! {
         stream = TcpStream::connect(input_member.to_string()) => { stream.map_err(|_| StatusCode::CONFLICT)? },
         () = time::sleep(time::Duration::from_secs(5)) => { Err(StatusCode::CONFLICT)? }

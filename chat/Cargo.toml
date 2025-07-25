@@ -6,3 +6,5 @@ edition = "2024"
 [dependencies]
 bootstrap_client = { path = "../bootstrap/client" }
 peep = { path = "../peep" }
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
