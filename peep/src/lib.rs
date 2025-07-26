@@ -1,4 +1,4 @@
-use std::{net::IpAddr};
+use std::{mem, net::{IpAddr, Ipv6Addr}};
 
 use anyhow::anyhow;
 use bootstrap_client::BootstrapClient;
@@ -41,18 +41,22 @@ impl PeepClient {
 async fn find_inbound_addr(session: &str, bootstrap_client: &BootstrapClient) -> anyhow::Result<SessionMemberLocation> {
     for (_, ip) in list_afinet_netifas()?.iter() {
         if let IpAddr::V6(ipv6) = ip {
-            if let Ok(listener) = TcpListener::bind(format!("[{}]:0", ipv6.to_string())).await {
-                if let Ok(local_addr) = listener.local_addr() {
-                    if let Ok(member) = SessionMemberLocation::try_from(&local_addr) {
-                        println!("trying {}", local_addr);
-                        if let Ok(_) = bootstrap_client.update_session(session, &member).await {
-                            return Ok(member)
-                        }
-                    }
-                }
+            if let Ok(member) = try_create_session_member_location(session, bootstrap_client, ipv6).await {
+                return Ok(member);
             }
         }
     }
 
     Err(anyhow!("could not establish path for inbound traffic"))
+}
+
+async fn try_create_session_member_location(session: &str, bootstrap_client: &BootstrapClient, addr: &Ipv6Addr) -> anyhow::Result<SessionMemberLocation> {
+    let listener = TcpListener::bind("[::]:0").await?;
+    let port = listener.local_addr()?.port();
+    let member = SessionMemberLocation { addr: addr.clone(), port };
+
+    println!("trying {}", member.to_string());
+    let _ = bootstrap_client.update_session(session, &member).await?;
+                
+    Ok(member) 
 }
