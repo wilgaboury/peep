@@ -3,7 +3,7 @@ use peep::{PeepClient, PeepClientConfig};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let bootstrap = BootstrapClient::new("52.72.95.29:80".to_string(), Security::Insecure).await?;
+    let bootstrap = BootstrapClient::new("18.216.61.107:80".to_string(), Security::Insecure).await?;
     let peep = PeepClient::new(PeepClientConfig {
         bootstrap,
         session: None,
