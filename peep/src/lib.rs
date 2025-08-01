@@ -122,12 +122,12 @@ async fn listener_task(listener: TcpListener, mut shutdown: oneshot::Receiver<()
 
                     loop {
                         // let mut buf
-                        // stream.read(buf)
+                        // stream.read(buf)s
                     }
                 });
             },
             // TODO: figure out how to use oneshot in loop
-            _ = shutdown => return
+            // _ = shutdown => return
         }
     }
 }
